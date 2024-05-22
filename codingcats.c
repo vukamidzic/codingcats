@@ -3,24 +3,13 @@
 #include <stdbool.h>
 #include <math.h>
 #include "cats/cat.h"
+#include "./emojis/emoji.h"
 #include <raylib.h>
 
 #include <time.h>
 
-/*  
-Wave functions:
-	* WAVE_FN(c1,c2) => f(x) = sin(c1*x)/c2; c1,c2 -> consts
-	* CUSTOM_WAVE_FN_1(c1,c2) => f(x) = -abs(sin(c1*x)/c2); c1,c2 -> consts
-	* CUSTOM_WAVE_FN_2(c1,c2) => f(x) = -abs(sin(c1*x) + cos(x)/c2); c1,c2 -> consts
-*/
-
-#define WAVE_FN(c1,c2) (sin(GetTime()*(c1))/(c2)) 
-#define CUSTOM_WAVE_FN_1(c1,c2) (-fabs(sin(GetTime()*(c1)))/(c2)) 
-#define CUSTOM_WAVE_FN_2(c1,c2) (-fabs(sin(GetTime()*(c1)) + cos(GetTime()))/(c2))
-#define EMOJI_PADDING (75.0f)
-
 // *********************************************************
-#define NUM_CATS (8)
+#define NUM_CATS (10)
 static char* cat_names[] = {
 	"black", "blue", "brown",
 	"calico", "cotton_candy_blue", "cotton_candy_pink",
@@ -31,7 +20,6 @@ static char* cat_names[] = {
 	"red", "seal_point", "teal",
 	"white", "white_grey", "yellow"
 };
-static int cmd_res;
 // *********************************************************
 
 //--------- DEBUG MODE ----------//
@@ -39,6 +27,7 @@ static int cmd_res;
 //-------------------------------//
 
 #define CAT(name,x,y,v) createCat(name,x,y,v)
+#define INIT_INT_ARRAY(arr, sz) for (int i = 0; i < (sz); ++i) (arr)[i] = -1;
 
 //------- MONITOR DIMENSIONS ---------//
 const int MONITORW = 1920;
@@ -69,10 +58,10 @@ int main(void) {
 #endif
 // ***********************************************************************
 	SetConfigFlags(FLAG_WINDOW_TRANSPARENT | FLAG_WINDOW_UNFOCUSED);
-	InitWindow(WINW, WINH, "CODING CATS");
+	InitWindow(WINW, WINH, "Coding Cats");
 // ***********************************************************************
 #ifndef DEBUG
-	SetWindowState(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_MOUSE_PASSTHROUGH);
+	SetWindowState(FLAG_WINDOW_UNDECORATED  | FLAG_WINDOW_MOUSE_PASSTHROUGH);
 #endif
 // ***********************************************************************
 	SetWindowPosition(WINPOSX, WINPOSY);
@@ -84,9 +73,10 @@ int main(void) {
 
 	Image window_icon = LoadImage("./appicon.png");
 	SetWindowIcon(window_icon);
+	SetExitKey(KEY_Q);
 
 	int indices[NUM_CATS];
-	for (int i = 0; i < NUM_CATS; ++i) indices[i] = -1;
+	INIT_INT_ARRAY(indices, NUM_CATS);
 
 	Cat cats[NUM_CATS];
 	for (int i = 0; i < NUM_CATS; ++i) {
@@ -102,11 +92,24 @@ int main(void) {
 		indices[i] = curr_idx;
 	}
 
-	Texture2D emojis = LoadTexture("./emojis/emojis.png");
-
+	double rand_spot_time = GetTime();
+	float rand_x_spot = GetRandomValue(0,1920)*1.0f;
 	while (!WindowShouldClose()) {
-		cmd_res = atoi(LoadFileText("./info.config"));
 		for (int i = 0; i < NUM_CATS; ++i) UpdateCat(&cats[i]);
+		
+		double curr_time = GetTime();
+		if (curr_time - rand_spot_time >= 20.0f) {
+			rand_x_spot = GetRandomValue(0,1920)*1.0f;
+			rand_spot_time = curr_time;
+			for (int i = 0; i < NUM_CATS; ++i) {
+				if (fabsf(cats[i].x - rand_x_spot) <= 300.0f && cats[i].emoji.state == EMOJI_IDLE) {
+					cats[i].emoji.x = cats[i].x + 40.0f;
+					cats[i].emoji.y = cats[i].y;
+					cats[i].emoji.state = EMOJI_ACTIVE;
+				}
+			}
+		}
+		
 
 		BeginDrawing();
 		#ifdef DEBUG
@@ -114,41 +117,10 @@ int main(void) {
 		#else
 			ClearBackground(BLANK);	
 		#endif
-			for (int i = 0; i < NUM_CATS; ++i) PlayAnim(&cats[i]);
+
 			for (int i = 0; i < NUM_CATS; ++i) {
-				int xpos = cats[i].x, ypos = cats[i].y;
-				if (cmd_res == 0) {
-					DrawTexturePro(
-						emojis,
-						(Rectangle) {.x = 0, .y = 0, .width = 16, .height = 16},
-						(Rectangle) {
-							.x = (cats[i].state == WALK)? ((cats[i].dir == LEFT)? xpos + 40.0f 
-								: xpos + 52.0f) : xpos + 50.0f, 
-							.y = ypos * WAVE_FN(8.0f,9.0f) + EMOJI_PADDING,
-							.width = 32, 
-							.height = 32
-						},
-						Vec2(0.0f, 0.0f),
-						0.0f,
-						RAYWHITE
-					);
-				}
-				else {
-					DrawTexturePro(
-						emojis,
-						(Rectangle) {.x = 0, .y = 112, .width = 16, .height = 16},
-						(Rectangle) {
-							.x = (cats[i].state == WALK)? ((cats[i].dir == LEFT)? xpos + 40.0f 
-								: xpos + 52.0f) : xpos + 50.0f,
-							.y = ypos * WAVE_FN(8.0f,9.0f) + EMOJI_PADDING, 
-							.width = 32, 
-							.height = 32
-						},
-						Vec2(0.0f, 0.0f),
-						0.0f,
-						RAYWHITE
-					);
-				}
+				PlayAnim(&cats[i]);
+				if (cats[i].emoji.state == EMOJI_ACTIVE) DrawEmoji(&cats[i].emoji);
 			}
 		EndDrawing();
 	}

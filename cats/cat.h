@@ -4,6 +4,7 @@
 #include <raylib.h>
 #include "../animation.h"
 #include "../timer.h"
+#include "../emojis/emoji.h"
 
 #define Vec2(x,y) (Vector2){(x),(y)} 
 #define Rect(x,y,w,h) (Rectangle){(x),(y),(w),(h)}
@@ -19,22 +20,24 @@ typedef enum State {
     IDLE
 } State;
 
-#define NAMEMAX (100)
+#define PATHMAX (100)
 
 typedef struct Cat {
-    char name[NAMEMAX];
     Texture2D tex;
     float x;
     float y;
-    SpriteAnim sit;
-    SpriteAnim idle;
-    SpriteAnim left_walk;
-    SpriteAnim right_walk;
     float velocity;
-    Direction dir;
     State state;
-    Timer timer;
-    Timer timer1;
+    Direction dir;
+    // SpriteAnim sit;
+    // SpriteAnim idle;
+    // SpriteAnim left_walk;
+    // SpriteAnim right_walk;
+    SpriteAnim anims[4];
+    // Timer timer;
+    // Timer timer1;
+    Timer timers[2];
+    Emoji emoji;
 } Cat;
 
 Cat createCat(char name[], float x, float y, float velocity);
